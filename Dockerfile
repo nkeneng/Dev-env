@@ -1,56 +1,62 @@
-# Start with a base image that supports multiple PHP versions
-FROM debian:bullseye-slim
+#e the official Ubuntu base image
+FROM ubuntu:latest
 
-# Install necessary tools and dependencies
-RUN apt-get update && apt-get install -y \
-    sudo \
-    vim \
-    curl \
-    wget \
-    git \
-    unzip \
-    build-essential \
-    libxml2-dev \
-    libsqlite3-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libonig-dev \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    zlib1g-dev \
-    libzip-dev \
-    libbz2-dev \
-    libxslt-dev \
-    libreadline-dev \
-    libicu-dev \
-    libmcrypt-dev \
-    bison \
-    re2c \
-    autoconf \
-    php \
-    php-xml \
-    pkg-config \
-    && apt-get clean
+# Set non-interactive mode for apt-get to avoid prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install phpbrew
-RUN curl -L -O https://github.com/phpbrew/phpbrew/releases/latest/download/phpbrew.phar \
-    && chmod +x phpbrew.phar \
-    && mv phpbrew.phar /usr/local/bin/phpbrew
+RUN apt update && apt install sudo wget curl -y
 
-# Initialize phpbrew
-RUN phpbrew init
-
-RUN phpbrew install -j $(nproc) 8.3 +default +sqlite
+RUN cd
 
 # Copy your setup script into the container
-RUN wget https://stevennkeneng.com/setup.sh
+#RUN wget http://stevennkeneng.com/setup.sh
+
+COPY ./setup.sh .
 
 # Make the setup script executable
-RUN chmod +x ./setup.sh
+RUN chmod u+x ./setup.sh
 
 # Run your setup script
 RUN ./setup.sh
+
+# Update package lists and install required packages
+RUN apt-get install -y \
+    build-essential \
+    libxml2-dev \
+    libssl-dev \
+    libbz2-dev \
+    libcurl4-openssl-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libxpm-dev \
+    libfreetype6-dev \
+    libmcrypt-dev \
+    libmysqlclient-dev \
+    libreadline-dev \
+    libtidy-dev \
+    libxslt-dev \
+    libzip-dev \
+    re2c \
+    bison \
+    autoconf \
+    automake \
+    php \
+    php-xml \
+    pkg-config \
+    ca-certificates \
+    sqlite3 \
+    libsqlite3-dev \
+    libonig-dev \
+    --no-install-recommends && \
+    rm -r /var/lib/apt/lists/*
+
+# Install phpbrew
+RUN wget -O /usr/local/bin/phpbrew https://github.com/phpbrew/phpbrew/releases/latest/download/phpbrew.phar && \
+    chmod +x /usr/local/bin/phpbrew
+
+# Initialize phpbrew
+RUN phpbrew init
+RUN phpbrew install -j $(nproc) 8.3 +default +sqlite +bcmath
 
 # Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -59,8 +65,8 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN curl -sS https://get.symfony.com/cli/installer | bash \
     && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
 
-# Expose port 80
-EXPOSE 80
+# Source phpbrew script
+RUN cat /root/.phpbrew/bashrc >> /root/.zshrc
 
-# Set the default command
-CMD ["zsh"]
+# Command to start bash
+CMD ["bash"]
